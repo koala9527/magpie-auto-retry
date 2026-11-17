@@ -90,8 +90,10 @@ test('review: admin cancellation releases an inference blocked on downstream dra
     res.on('close', () => pump.abort());
     (async () => {
       try {
-        // At most 64 frames (about 4 MiB); no unbounded producer in this probe.
-        for (let i = 0; i < 64 && !res.destroyed; i++) {
+        // Linux TCP autotuning may absorb the original 4 MiB fixture entirely.
+        // A bounded 64 MiB producer reaches real backpressure on both platforms;
+        // only one reusable frame is allocated, and cancellation stops the pump.
+        for (let i = 0; i < 1024 && !res.destroyed; i++) {
           sentBytes += Buffer.byteLength(chunk);
           if (!res.write(chunk)) await once(res, 'drain', { signal: pump.signal });
         }
@@ -105,7 +107,8 @@ test('review: admin cancellation releases an inference blocked on downstream dra
   const paused = new Promise(resolve => client.on('response', response => { response.pause(); resolve(response); }));
   client.end('{"model":"review/chat","stream":true}');
   await paused;
-  await sleep(500);
+  await until(() => downstream?.writableNeedDrain, 2500);
+  await sleep(50);
   assert.ok(downstream.writableNeedDrain, 'paused TCP reader did not create downstream backpressure');
   const blockedDownstream = downstream;
   const id = f.gateway.snapshot().activeRequests[0]?.id;

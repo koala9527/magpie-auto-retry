@@ -544,6 +544,9 @@ test('导出先展示可全选 JSON；独立浏览器显式发起下载，不混
   assert.match(await page.locator('#export-status').innerText(), /发起下载/);
   assert.doesNotMatch(await page.locator('#export-status').innerText(), /已导出|已保存|下载成功/);
   await page.getByRole('button', { name: '关闭导出', exact: true }).click();
+  // The dialog's close event is queued by the browser. Await its focus handler,
+  // rather than racing that task on a faster Linux headless browser.
+  await page.waitForFunction(() => document.activeElement === document.getElementById('export-button'));
   assert.equal(await page.locator('#export-button').evaluate(node => document.activeElement === node), true);
 });
 
