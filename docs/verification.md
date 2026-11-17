@@ -39,4 +39,4 @@ The test writes only its isolated fixture configuration, starts its own host and
 
 Covered boundaries include cancellation during backpressure, concurrency before upload and during model catalog reads, opaque sandbox authorization, partial tool/text/refusal output without replay, native protocol termination, bounded Gemini candidate indexes, incomplete SSE tails, atomic settings persistence and honest unknown availability after idle/offline intervals.
 
-Windows and Linux CI run on Node.js 22 and 24. Chromium browser tests run on Linux. A release records the actual workflow result separately from these local results.
+The [cross-platform CI run](https://github.com/koala9527/magpie-auto-retry/actions/runs/44085303081) for commit `3eea40a6afa2bcc3e2a91b3fcd48d7027856cef3` completed successfully: all four Windows/Linux × Node.js 22/24 jobs and the Linux Chromium browser job passed. The browser contract waits for the queued dialog close/focus event. The cancellation regression waits for actual backpressure with a bounded producer instead of assuming a fixed OS socket-buffer size.

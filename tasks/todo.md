@@ -7,5 +7,5 @@
 - [x] Dashboard and Magpie launcher
 - [x] Official host integration
 - [x] Browser/security/coverage/package verification
-- [ ] Independent rollback test and four evidence artifacts
-- [ ] Open-source metadata, clean history and remote publication
+- [x] Independent rollback test and four evidence artifacts
+- [x] Open-source metadata, clean history and remote publication
