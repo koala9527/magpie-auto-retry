@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Magpie Auto Retry · 打开仪表台</title>
+  <style>
+    :root { color-scheme: light dark; --bg: #f3f2ed; --fg: #243c31; --muted: #647166; --line: #d9ded2; --accent: #245a43; --surface: #fffef9; --danger: #984f34; }
+    :root[data-theme="dark"] { --bg: #14201a; --fg: #e3ecdf; --muted: #afbdab; --line: #3a4b3d; --accent: #b9dfc4; --surface: #1c2a22; --danger: #ecb697; }
+    @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #14201a; --fg: #e3ecdf; --muted: #afbdab; --line: #3a4b3d; --accent: #b9dfc4; --surface: #1c2a22; --danger: #ecb697; } }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; padding: 24px; background: var(--bg); color: var(--fg); font: 14px/1.7 "Segoe UI Variable Text", "PingFang SC", "Microsoft YaHei", sans-serif; }
+    main { width: min(100%, 480px); padding: 40px; border: 1px solid var(--line); background: var(--surface); border-radius: 10px; }
+    .brand { display: flex; align-items: center; gap: 14px; margin-bottom: 36px; }
+    .brand svg { width: 48px; height: 48px; flex-shrink: 0; }
+    .wordmark { font: 30px/1.2 Georgia, "Songti SC", serif; letter-spacing: -.6px; }
+    .submark, .eyebrow, footer { font: 10px/1.6 "Bahnschrift", "Cascadia Mono", monospace; letter-spacing: 1.5px; color: var(--muted); }
+    .submark { margin-top: 5px; }
+    .eyebrow { padding-top: 24px; border-top: 1px solid var(--line); }
+    h1 { font-size: 20px; font-weight: 500; margin: 12px 0; }
+    p { color: var(--muted); font-size: 12px; margin: 0; overflow-wrap: anywhere; }
+    .progress { display: flex; align-items: center; gap: 8px; margin-top: 24px; font-size: 11px; color: var(--accent); }
+    .progress::before { content: ""; width: 7px; height: 7px; border: 1px solid currentColor; border-radius: 50%; }
+    #launch-error { color: var(--danger); padding: 12px 0 0; }
+    #launch-retry { font: inherit; color: var(--fg); border: 1px solid var(--line); background: var(--bg); border-radius: 5px; min-height: 42px; padding: 8px 16px; margin-top: 20px; cursor: pointer; }
+    #launch-retry:hover { border-color: var(--accent); }
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+    footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-top: 32px; font-size: 9px; letter-spacing: .5px; }
+    [hidden] { display: none !important; }
+    @media (max-width: 479px) { body { padding: 20px; } main { padding: 28px; } }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
+  </style>
+  <script src="_magpie/bridge.js"></script>
+  <script src="launch.js" defer></script>
+</head>
+<body>
+  <main aria-labelledby="launch-heading">
+    <div class="brand"><svg viewBox="0 0 64 64" fill="none" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#173F34"/><path d="M46 18a20 20 0 1 0 6 26m-7-32 1 8-8-1" stroke="#AEE0C2" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M18 45 31 21c2-4 8-5 11-1l3 5 6 2-7 4-4 9-13-2-9 7Z" fill="#F0F4E7"/><path d="m27 38 10-10-3 14-7-4Z" fill="#83BA9A"/><circle cx="39" cy="23" r="1.5" fill="#173F34"/></svg><div><div class="wordmark">Magpie</div><div class="submark">AUTO RETRY</div></div></div>
+    <div class="eyebrow">LOCAL RESILIENCE / 本机韧性</div>
+    <h1 id="launch-heading">打开运行仪表台</h1>
+    <p>由 Magpie 提供服务入口。设置、请求和观测数据以管理服务返回的真实状态为准。</p>
+    <div class="progress" id="launch-status" role="status" aria-live="polite" aria-atomic="true">正在等待 Magpie 就绪…</div>
+    <p id="launch-error" role="alert" aria-atomic="true" hidden></p>
+    <button type="button" id="launch-retry" hidden>重新连接</button>
+    <noscript><p>请启用 JavaScript 以通过 Magpie 打开仪表台。当前尚未连接管理服务。</p></noscript>
+    <footer><span>等待不是结束。</span><span>MAGPIE AUTO RETRY</span></footer>
+  </main>
+</body>
+</html>

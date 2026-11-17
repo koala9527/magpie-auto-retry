@@ -1,0 +1,27 @@
+name: Bug report
+description: Report a reproducible issue without prompts or credentials.
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Plugin / Magpie / Node version
+    validations:
+      required: true
+  - type: dropdown
+    id: protocol
+    attributes:
+      label: Protocol
+      options: [Chat Completions, Responses, Anthropic, Gemini, Dashboard]
+  - type: textarea
+    id: steps
+    attributes:
+      label: Isolated reproduction
+      description: Remove credentials, prompts, private accounts and tool arguments.
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true

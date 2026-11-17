@@ -1,0 +1,11 @@
+.DS_Store
+node_modules/
+*.log
+*.tgz
+.env
+.env.*
+coverage/
+playwright-report/
+test-results/
+.local/
+ui/.verification/

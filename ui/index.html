@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="auto-retry-token" content="__ADMIN_TOKEN__">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="Magpie Auto Retry 本机运维仪表台：无限重试、真实观测、请求管理与运行设置。">
+  <title>Magpie Auto Retry · 运行仪表台</title>
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">跳到主要内容</a>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="仪表台导航">
+      <a class="brand" href="#overview" aria-label="Magpie Auto Retry 总览">
+        <img src="icon.svg" alt="" width="44" height="44">
+        <span class="brand-wordmark"><span>Magpie</span><span>Auto Retry</span></span>
+      </a>
+      <div class="sidebar-caption">LOCAL RESILIENCE / 本机韧性</div>
+      <nav class="main-nav" aria-label="章节">
+        <a href="#overview" aria-current="location"><span class="nav-index">01</span>运行总览</a>
+        <a href="#providers"><span class="nav-index">02</span>提供商观测</a>
+        <a href="#requests"><span class="nav-index">03</span>当前请求<span class="nav-count" id="nav-request-count">—</span></a>
+        <a href="#activity"><span class="nav-index">04</span>故障与事件</a>
+        <a href="#settings"><span class="nav-index">05</span>运行设置</a>
+        <a href="#connection"><span class="nav-index">06</span>接入方式</a>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="sidebar-note"><span class="orbit-mark" aria-hidden="true">↻</span><p>等待不是结束。<br><span>恢复之后，继续原请求。</span></p></div>
+        <div class="sidebar-meta"><span id="sidebar-version">版本待连接</span><span>LOOPBACK ONLY</span></div>
+      </div>
+    </aside>
+
+    <main class="workspace" id="main" tabindex="-1">
+      <header class="topbar">
+        <div class="topbar-context"><span class="context-label">运维控制台</span><span class="context-divider" aria-hidden="true">/</span><span>Magpie Auto Retry</span></div>
+        <div class="topbar-tools">
+          <span class="connection-indicator"><span class="status-dot" id="connection-dot" aria-hidden="true"></span><span id="connection-label" data-state="loading">正在连接</span></span>
+          <label class="theme-control"><span class="sr-only">显示主题</span><select id="theme-select"><option value="system">跟随系统</option><option value="light">浅色</option><option value="dark">深色</option></select></label>
+        </div>
+      </header>
+
+      <noscript><div class="notice notice-error">请启用 JavaScript 以连接管理服务。当前页面未读取任何运行状态。</div></noscript>
+      <div class="notice notice-error" id="connection-banner" role="status" aria-live="polite" aria-atomic="true" hidden>
+        <div><strong id="connection-error-title">连接失败</strong><p id="connection-error-detail"></p></div>
+        <button class="button button-small" type="button" id="reconnect-button">重新连接</button>
+      </div>
+      <div class="notice notice-warning" id="storage-banner" role="status" aria-live="polite" aria-atomic="true" hidden>
+        <span class="notice-symbol" aria-hidden="true">!</span><div><strong id="storage-title">统计存储降级</strong><p id="storage-detail"></p></div>
+      </div>
+      <p class="action-feedback" id="action-status" role="status" aria-live="polite" aria-atomic="true"></p>
+
+      <section class="overview-section" id="overview" aria-labelledby="overview-title">
+        <div class="page-heading">
+          <div><p class="eyebrow">OPERATIONS / AUTO RETRY</p><h1 id="overview-title">运行总览<span class="heading-period" aria-hidden="true">.</span></h1><p class="page-description">持有原请求，无限重试。恢复之后，继续原任务。</p></div>
+          <div class="period-tools">
+            <div class="period-control" role="group" aria-label="统计时间范围">
+              <button type="button" data-period="24h" aria-pressed="true">24 小时</button>
+              <button type="button" data-period="7d" aria-pressed="false">7 天</button>
+              <button type="button" data-period="30d" aria-pressed="false">30 天</button>
+            </div>
+            <p class="snapshot-caption" id="snapshot-time">等待第一份服务快照</p>
+          </div>
+        </div>
+        <p class="sync-note" id="sync-note" role="status" aria-live="polite" hidden></p>
+        <dl class="metrics" aria-label="运行指标">
+          <div class="metric metric-policy"><dt>重试策略<span class="metric-index">01</span></dt><dd data-metric="policy">∞</dd><p id="policy-detail">固定无限重试 · 等待读取启用状态</p></div>
+          <div class="metric"><dt>当前等待<span class="metric-index">02</span></dt><dd data-metric="waitingRequests">—</dd><p id="waiting-detail">当前值 · 不受时间范围影响</p></div>
+          <div class="metric"><dt>故障尝试<span class="metric-index">03</span></dt><dd data-metric="failures">—</dd><p id="failures-detail">真实失败尝试次数</p></div>
+          <div class="metric"><dt>恢复请求<span class="metric-index">04</span></dt><dd data-metric="recoveredRequests">—</dd><p>重试后真实成功的请求</p></div>
+          <div class="metric metric-duration"><dt>观测可用时长<span class="metric-index">05</span></dt><dd data-metric="availableMs">—</dd><p id="observed-detail">仅计算有观测的时间</p></div>
+          <div class="metric"><dt>观测可用率<span class="metric-index">06</span></dt><dd data-metric="availabilityPercent">—</dd><p id="availability-detail">无观测时不计为 100%</p></div>
+        </dl>
+        <div class="summary-strip"><span class="summary-period" id="display-period">过去 24 小时</span><span>请求 <strong data-total="requests">—</strong></span><span>成功 <strong data-total="successes">—</strong></span><span>重试 <strong data-total="retries">—</strong></span><span>终止 <strong data-total="failedRequests">—</strong></span><span>取消 <strong data-total="cancelledRequests">—</strong></span><span>流中断 <strong data-total="interruptedStreams">—</strong></span></div>
+      </section>
+
+      <section class="surface" id="providers" aria-labelledby="providers-title">
+        <header class="section-header"><div><p class="eyebrow">PROVIDER OBSERVATIONS</p><h2 id="providers-title">提供商观测<span class="section-count" id="provider-count">—</span></h2></div><div class="band-legend" aria-label="小时带图例"><span><i class="legend-swatch legend-healthy" aria-hidden="true"></i>可用</span><span><i class="legend-swatch legend-outage" aria-hidden="true"></i>故障</span><span><i class="legend-swatch legend-mixed" aria-hidden="true"></i>混合</span><span><i class="legend-swatch legend-unknown" aria-hidden="true"></i>未知</span></div></header>
+        <div class="empty-state" id="providers-empty"><svg class="empty-symbol" viewBox="0 0 64 40" fill="none" aria-hidden="true"><path d="M4 22h12m4 0h8m8 0h8m8 0h8M32 4v32" stroke="currentColor" stroke-width="2" stroke-dasharray="3 4"/><circle cx="32" cy="22" r="6" fill="var(--surface)" stroke="currentColor" stroke-width="2"/></svg><h3 id="providers-empty-title">等待服务数据</h3><p id="providers-empty-detail">尚未取得服务数据；提供商与小时状态将在连接成功后显示。</p></div>
+        <ul class="provider-list" id="provider-list"></ul>
+        <footer class="section-footnote"><span class="footnote-mark" aria-hidden="true">↗</span>每格 1 小时；可用率 = 已观测可用时间 / 已观测时间。无流量超过 5 分钟、服务关闭期间为未知，不等于正常运行。</footer>
+      </section>
+
+      <section class="surface" id="requests" aria-labelledby="requests-title">
+        <header class="section-header"><div><p class="eyebrow">IN-FLIGHT REQUESTS</p><h2 id="requests-title">当前请求<span class="section-count" id="active-count">—</span></h2></div><span class="section-aside">客户端仍连接的请求</span></header>
+        <div class="empty-state empty-state-compact" id="requests-empty"><h3 id="requests-empty-title">等待服务数据</h3><p id="requests-empty-detail">尚未取得当前请求状态。</p></div>
+        <ul class="request-list" id="request-list"></ul>
+        <footer class="section-footnote">取消会中止正在执行的请求及退避等待；已经产生的文本、思考或工具调用不会从头重放。</footer>
+      </section>
+
+      <section id="activity" aria-labelledby="activity-title">
+        <div class="standalone-heading"><div><p class="eyebrow">INCIDENT LOG</p><h2 id="activity-title">故障与事件</h2></div><span class="section-aside" id="activity-period">过去 24 小时</span></div>
+        <div class="activity-grid">
+          <section class="surface activity-panel" aria-labelledby="incidents-title"><header class="section-header"><h3 id="incidents-title">故障区间<span class="section-count" id="incident-count">—</span></h3><span class="section-aside">从失败，到真实恢复</span></header><div class="empty-state empty-state-compact" id="incidents-empty"><p id="incidents-empty-detail">尚未取得故障区间。</p></div><ul class="incident-list" id="incident-list"></ul></section>
+          <section class="surface activity-panel" aria-labelledby="events-title"><header class="section-header"><h3 id="events-title">事件时间线<span class="section-count" id="event-count">—</span></h3><span class="section-aside">最新在前</span></header><div class="empty-state empty-state-compact" id="events-empty"><p id="events-empty-detail">尚未取得事件记录。</p></div><ul class="event-list" id="event-list"></ul></section>
+        </div>
+      </section>
+
+      <section class="surface settings-panel" id="settings" aria-labelledby="settings-title">
+        <header class="section-header"><div><p class="eyebrow">RUNTIME POLICY</p><h2 id="settings-title">运行设置</h2></div><span class="dirty-state" id="dirty-state">等待读取设置</span></header>
+        <form id="settings-form" novalidate>
+          <fieldset id="settings-fields" disabled>
+            <legend class="sr-only">自动重试运行参数</legend>
+            <div class="settings-toggles">
+              <div class="toggle-field"><div><label for="enabled">启用自动重试</label><p>热更新新的运行设置；重试次数固定为无限。</p></div><span class="switch"><input type="checkbox" id="enabled" name="enabled" aria-describedby="enabled-error"><span class="switch-track" aria-hidden="true"></span></span><span class="field-error" id="enabled-error" hidden></span></div>
+              <div class="toggle-field"><div><label for="jitter">退避抖动</label><p>分散重试时刻，避免恢复时集中发起请求。</p></div><span class="switch"><input type="checkbox" id="jitter" name="jitter" aria-describedby="jitter-error"><span class="switch-track" aria-hidden="true"></span></span><span class="field-error" id="jitter-error" hidden></span></div>
+            </div>
+            <div class="settings-grid">
+              <div class="field"><label for="initialDelayMs">初始退避</label><div class="input-with-unit"><input type="number" id="initialDelayMs" name="initialDelayMs" min="0.1" max="60" step="0.001" inputmode="decimal" aria-describedby="initialDelayMs-hint initialDelayMs-error"><span>秒</span></div><p class="field-hint" id="initialDelayMs-hint">0.1–60 秒，首次重试的等待时间。</p><p class="field-error" id="initialDelayMs-error" hidden></p></div>
+              <div class="field"><label for="maxDelayMs">最大退避</label><div class="input-with-unit"><input type="number" id="maxDelayMs" name="maxDelayMs" min="0.1" max="3600" step="0.001" inputmode="decimal" aria-describedby="maxDelayMs-hint maxDelayMs-error"><span>秒</span></div><p class="field-hint" id="maxDelayMs-hint">0.1–3600 秒，不得小于初始退避。</p><p class="field-error" id="maxDelayMs-error" hidden></p></div>
+              <div class="field"><label for="attemptTimeoutMs">单次请求超时</label><div class="input-with-unit"><input type="number" id="attemptTimeoutMs" name="attemptTimeoutMs" min="1" max="600" step="0.001" inputmode="decimal" aria-describedby="attemptTimeoutMs-hint attemptTimeoutMs-error"><span>秒</span></div><p class="field-hint" id="attemptTimeoutMs-hint">1–600 秒；不是重试总时长限制。</p><p class="field-error" id="attemptTimeoutMs-error" hidden></p></div>
+              <div class="field"><label for="streamIdleTimeoutMs">流空闲超时</label><div class="input-with-unit"><input type="number" id="streamIdleTimeoutMs" name="streamIdleTimeoutMs" min="1" max="600" step="0.001" inputmode="decimal" aria-describedby="streamIdleTimeoutMs-hint streamIdleTimeoutMs-error"><span>秒</span></div><p class="field-hint" id="streamIdleTimeoutMs-hint">1–600 秒，等待流的下一段内容。</p><p class="field-error" id="streamIdleTimeoutMs-error" hidden></p></div>
+              <div class="field"><label for="heartbeatMs">等待心跳</label><div class="input-with-unit"><input type="number" id="heartbeatMs" name="heartbeatMs" min="1" max="30" step="0.001" inputmode="decimal" aria-describedby="heartbeatMs-hint heartbeatMs-error"><span>秒</span></div><p class="field-hint" id="heartbeatMs-hint">1–30 秒；SSE 注释心跳不记作成功。</p><p class="field-error" id="heartbeatMs-error" hidden></p></div>
+              <div class="field"><label for="maxConcurrentRequests">最大并发请求</label><div class="input-with-unit"><input type="number" id="maxConcurrentRequests" name="maxConcurrentRequests" min="1" max="256" step="1" inputmode="numeric" aria-describedby="maxConcurrentRequests-hint maxConcurrentRequests-error"><span>个</span></div><p class="field-hint" id="maxConcurrentRequests-hint">1–256 个；无限重试不代表无限并发。</p><p class="field-error" id="maxConcurrentRequests-error" hidden></p></div>
+              <div class="field"><label for="historyDays">历史保留天数</label><div class="input-with-unit"><input type="number" id="historyDays" name="historyDays" min="1" max="90" step="1" inputmode="numeric" aria-describedby="historyDays-hint historyDays-error"><span>天</span></div><p class="field-hint" id="historyDays-hint">1–90 天，只保留聚合观测数据。</p><p class="field-error" id="historyDays-error" hidden></p></div>
+              <div class="field field-upstream"><label for="upstreamUrl">本机 Magpie 上游地址</label><input type="url" id="upstreamUrl" name="upstreamUrl" autocomplete="off" spellcheck="false" aria-describedby="upstreamUrl-hint upstreamUrl-error"><p class="field-hint" id="upstreamUrl-hint">Magpie 默认 http://127.0.0.1:3425；不要填重试服务自己的端口。</p><p class="field-error" id="upstreamUrl-error" hidden></p></div>
+            </div>
+          </fieldset>
+          <p class="policy-preview" id="policy-preview">读取设置后显示当前退避规则。编辑只改变表单，保存才会生效。</p>
+          <div class="form-actions"><button class="button button-primary" type="submit" id="save-button" disabled>保存设置<span aria-hidden="true">↗</span></button><button class="button" type="button" id="defaults-button" disabled>恢复默认</button><span class="form-action-hint">恢复默认仅回填，不会自动保存。</span></div>
+          <p class="form-feedback" id="form-status" role="status" aria-live="polite" aria-atomic="true">等待读取服务设置。</p>
+        </form>
+      </section>
+
+      <section class="surface connection-panel" id="connection" aria-labelledby="connection-title">
+        <header class="section-header"><div><p class="eyebrow">CONNECT YOUR AGENT</p><h2 id="connection-title">接入方式</h2></div><span class="local-label">仅本机转发</span></header>
+        <div class="connection-grid"><div class="connection-instructions"><p>将 Agent 的 <strong>API 基址</strong>改为下面的地址。<br>模型名和 Magpie key 保持原样。</p><label class="field-label" for="proxy-url">Agent API 基址</label><div class="copy-field"><input id="proxy-url" type="text" readonly spellcheck="false" placeholder="等待服务返回地址"><button class="button button-small" type="button" id="copy-proxy" disabled>复制地址</button></div><p class="field-hint">插件不会改写现有 Agent 配置。已经退出或取消的任务不会自动重发。</p></div><dl class="service-facts"><div><dt>运行上游</dt><dd id="runtime-upstream">—</dd></div><div><dt>服务运行时长</dt><dd id="service-uptime">—</dd></div><div><dt>统计存储</dt><dd id="storage-status">等待连接</dd></div><div><dt>刷新频率</dt><dd>3 秒<span> · 隐藏页面暂停</span></dd></div></dl></div>
+        <div class="data-actions"><p>仅导出聚合统计，不包含对话内容、密钥或页面令牌。</p><div><button class="button" type="button" id="refresh-button"><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M16 8a6 6 0 1 0 0 4M16 3v5h-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>刷新数据</button><button class="button" type="button" id="export-button" disabled>导出 JSON</button><button class="button button-danger-quiet" type="button" id="reset-statistics" disabled>重置统计</button></div></div>
+      </section>
+      <footer class="workspace-footer"><span>Magpie Auto Retry<span class="footer-separator">/</span>请求不断，直到恢复。</span><span>真实观测，而非无流量探活。</span></footer>
+    </main>
+  </div>
+
+  <dialog id="reset-dialog" aria-labelledby="reset-title" aria-describedby="reset-description"><p class="eyebrow">RESET OBSERVATIONS</p><h2 id="reset-title">重置这段运行记录？</h2><p id="reset-description">聚合统计、故障区间和历史事件将被清空。这项操作没有撤销入口。<strong>仍然活跃的请求会保留，不会被取消。</strong></p><p class="form-feedback" id="reset-status" role="status" aria-live="polite" aria-atomic="true"></p><div class="dialog-actions"><button class="button" type="button" id="dismiss-reset" autofocus>保留统计</button><button class="button button-danger" type="button" id="confirm-reset">确认重置</button></div></dialog>
+  <dialog id="export-dialog" class="export-dialog" aria-labelledby="export-title" aria-describedby="export-description">
+    <p class="eyebrow">AGGREGATE DATA / JSON</p>
+    <h2 id="export-title">聚合统计 JSON</h2>
+    <p id="export-description">以下内容由管理服务的导出接口返回，不包含对话、密钥或页面令牌。可在 Magpie 内直接查看、全选并手动复制。</p>
+    <label class="field-label" for="export-json">聚合 JSON 内容</label>
+    <textarea id="export-json" readonly spellcheck="false" rows="14" aria-describedby="export-json-hint"></textarea>
+    <p class="field-hint" id="export-json-hint">全选后按 Ctrl+C / Command+C，或长按复制。手动复制不需要剪贴板权限。</p>
+    <p class="form-feedback" id="export-status" role="status" aria-live="polite" aria-atomic="true"></p>
+    <div class="dialog-actions"><button class="button" type="button" id="dismiss-export">关闭导出</button><button class="button" type="button" id="download-export" hidden>下载 JSON</button><button class="button button-primary" type="button" id="select-export">全选 JSON</button></div>
+  </dialog>
+  <template id="provider-template"><li class="provider-item"><div class="provider-header"><div class="provider-identity"><h3 class="provider-name"></h3><p class="provider-attribution"></p></div><span class="state-badge provider-status"></span><dl class="provider-stats"><div><dt>可用率</dt><dd class="provider-availability"></dd></div><div><dt>故障 / 重试</dt><dd class="provider-failures"></dd></div><div><dt>恢复</dt><dd class="provider-recovered"></dd></div></dl></div><div class="hour-band" role="group"></div><div class="band-axis"><span class="band-start"></span><span>每格 1 小时</span><span class="band-end"></span></div><p class="hour-detail"></p><p class="provider-last"></p></li></template>
+  <template id="request-template"><li class="request-item"><div class="request-main"><div class="request-title"><span class="state-badge request-status"></span><span class="request-provider"></span><span class="request-id"></span></div><p class="request-model"></p><div class="request-meta"><span class="request-attempt"></span><span class="request-age"></span><span class="request-retry"></span><span class="request-output"></span></div></div><button class="button button-small request-cancel" type="button">取消请求</button></li></template>
+  <template id="incident-template"><li class="incident-item"><div class="incident-title"><strong class="incident-provider"></strong><span class="state-badge incident-status"></span></div><p class="incident-reason mono"></p><div class="incident-meta"><span class="incident-time"></span><span class="incident-duration"></span><span class="incident-failures"></span></div></li></template>
+  <template id="event-template"><li class="event-item"><span class="event-marker" aria-hidden="true"></span><div><div class="event-title"><strong class="event-type"></strong><time class="event-time"></time></div><p class="event-provider"></p><p class="event-details mono"></p></div></li></template>
+</body>
+</html>

@@ -1,0 +1,84 @@
+{
+  "name": "magpie-auto-retry",
+  "version": "1.0.0",
+  "description": "A local Magpie plugin for infinite, cancellable provider retries, automatic request recovery, and an availability dashboard.",
+  "type": "module",
+  "main": "./index.mjs",
+  "bin": {
+    "magpie-auto-retry": "./bin/magpie-auto-retry.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "npm@10.9.8",
+  "files": [
+    "index.mjs",
+    "provider.middleware.js",
+    "src",
+    "bin",
+    "ui",
+    "page",
+    "docs",
+    "README.md",
+    "README.en.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "keywords": [
+    "magpie",
+    "magpie-plugin",
+    "middleware",
+    "gateway",
+    "retry",
+    "auto-heal",
+    "availability",
+    "dashboard"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/koala9527/magpie-auto-retry.git"
+  },
+  "homepage": "https://github.com/koala9527/magpie-auto-retry#readme",
+  "bugs": {
+    "url": "https://github.com/koala9527/magpie-auto-retry/issues"
+  },
+  "author": "koala9527",
+  "scripts": {
+    "test": "node --test \"tests/*.test.mjs\"",
+    "check": "node scripts/check.mjs",
+    "test:coverage": "node --test --experimental-test-coverage --test-coverage-include=src/** --test-coverage-lines=85 --test-coverage-functions=85 --test-coverage-branches=80 \"tests/*.test.mjs\"",
+    "test:browser": "node --test e2e/dashboard.spec.mjs && playwright test",
+    "dev": "node bin/magpie-auto-retry.mjs",
+    "prepack": "npm run check && npm test"
+  },
+  "magpie": {
+    "name": "Magpie Auto Retry",
+    "summary": {
+      "en": "Keep inference requests alive across provider outages. Infinite retries, automatic recovery and local availability statistics.",
+      "zh": "提供商故障时保留请求、无限重试，恢复后继续任务；本地设置与可用时长仪表台。"
+    },
+    "icon": "https://raw.githubusercontent.com/koala9527/magpie-auto-retry/main/ui/icon.svg",
+    "middleware": "./provider.middleware.js",
+    "page": {
+      "title": "Auto Retry",
+      "titles": {
+        "zh": "自动重试",
+        "zh-TW": "自動重試"
+      },
+      "file": "page/index.html",
+      "service": {
+        "port": 3430,
+        "option": "port"
+      }
+    },
+    "options": {
+      "port": 3430,
+      "upstreamUrl": "http://127.0.0.1:3425"
+    },
+    "permissions": []
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.1"
+  }
+}
