@@ -501,7 +501,7 @@
     const { values, errors } = readForm();
     text($('policy-preview'), Object.keys(errors).length ? '参数尚未填写完整或未通过校验。修正后再保存；运行中的服务设置没有改变。'
       : !values.enabled ? '表单规则：自动重试停用。保存前不会改变服务；活跃请求以服务实际状态为准。'
-        : `表单规则：无限重试 · 初始 ${values.initialDelayMs / 1000} 秒 → 指数退避，最高 ${values.maxDelayMs / 1000} 秒 · ${values.jitter ? '开启' : '关闭'}抖动 · 最多 ${values.maxConcurrentRequests} 个并发请求。${dirty ? ' 尚未保存。' : ''}`);
+        : `表单规则：临时失败后持续重试；先等 ${values.initialDelayMs / 1000} 秒，之后逐次加倍，普通等待每次最多 ${values.maxDelayMs / 1000} 秒。${values.jitter ? '等待时间有随机浮动' : '没有随机浮动'}；最多同时接待 ${values.maxConcurrentRequests} 个请求。${dirty ? ' 尚未保存。' : ''}`);
   }
 
   function setupTheme() {
@@ -701,17 +701,31 @@
   const navLinks = Array.from(document.querySelectorAll('.main-nav a'));
   const navSections = navLinks.map(link => $(link.hash.slice(1)));
   let navigationQueued = false;
+  let navigationTarget = null;
+  for (const link of navLinks) link.addEventListener('click', () => {
+    navigationTarget = $(link.hash.slice(1));
+    scheduleNavigation();
+  });
   function scheduleNavigation() {
     if (navigationQueued) return;
     navigationQueued = true;
     requestAnimationFrame(() => {
       navigationQueued = false;
-      // Derive the active chapter from all current rectangles, not a partial observer batch.
-      // At the page top the overview is current regardless of how far a tall viewport reaches.
       let current = navSections[0];
       if (window.scrollY > 24) {
         const readingLine = Math.min(360, innerHeight * .4);
-        for (const section of navSections) if (section.getBoundingClientRect().top <= readingLine) current = section;
+        let nearestTop = -Infinity;
+        for (const section of navSections) {
+          const top = section.getBoundingClientRect().top;
+          if (top <= readingLine && top >= nearestTop) { current = section; nearestTop = top; }
+        }
+        // Side-by-side sections may share a top edge; respect the clicked column
+        // while it remains visible, then resume geometric scroll tracking.
+        const targetRect = navigationTarget?.getBoundingClientRect();
+        if (targetRect && targetRect.top < innerHeight && targetRect.bottom > 0) current = navigationTarget;
+        else navigationTarget = null;
+      } else {
+        navigationTarget = null;
       }
       for (const link of navLinks) {
         if (link.hash === `#${current.id}`) link.setAttribute('aria-current', 'location');

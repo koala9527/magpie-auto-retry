@@ -29,7 +29,7 @@ const DEFAULTS = {
 function snapshot(overrides = {}) {
   const now = Date.now();
   return {
-    version: '1.0.0', generatedAt: now, period: '24h',
+    version: '1.0.1', generatedAt: now, period: '24h',
     server: {
       port: 3430, proxyUrl: 'http://127.0.0.1:3430/v1',
       upstreamUrl: DEFAULTS.upstreamUrl, runningSince: now - HOUR,
@@ -552,11 +552,21 @@ test('导出先展示可全选 JSON；独立浏览器显式发起下载，不混
 
 test('实际滚动章节更新导航；从设置回到顶部恢复总览高亮', async t => {
   const { page } = await dashboard(t, { state: populated() });
-  await page.getByLabel('初始退避').scrollIntoViewIfNeeded();
+  // The compact two-column layout exposes the first setting at page top.
+  await page.locator('.main-nav a[href="#settings"]').click();
   await page.waitForFunction(() => document.querySelector('.main-nav [aria-current]')?.hash === '#settings');
   await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
   await page.waitForFunction(() => document.querySelector('.main-nav [aria-current]')?.hash === '#overview');
   assert.equal(await page.locator('.main-nav [aria-current]').count(), 1);
+});
+
+test('双栏导航按点击的章节高亮，不被另一栏的同高章节覆盖', async t => {
+  const { page } = await dashboard(t, { state: populated() });
+  for (const id of ['providers', 'settings', 'requests', 'how-it-works', 'overview']) {
+    await page.locator(`.main-nav a[href="#${id}"]`).click();
+    await page.waitForFunction(id => document.querySelector('.main-nav [aria-current]')?.hash === `#${id}`, id, { timeout: 4000 });
+    assert.equal(await page.locator('.main-nav [aria-current]').count(), 1);
+  }
 });
 
 test('不可信名称、模型与错误只作为文本；长内容也不横向撑开', async t => {
@@ -626,6 +636,73 @@ async function launcher(t, bridgeSource) {
   await page.goto(`${origin}/launcher/`);
   return page;
 }
+
+test('参考风格：灰白页面、小字号、横向导航和双栏内容；深色也不引入彩色', async t => {
+  const { page } = await dashboard(t, { state: populated() });
+  const inspect = () => page.evaluate(() => {
+    const style = selector => getComputedStyle(document.querySelector(selector));
+    const root = getComputedStyle(document.documentElement);
+    return {
+      background: style('body').backgroundColor,
+      panel: style('#settings').backgroundColor,
+      bodySize: parseFloat(style('body').fontSize),
+      headingSize: parseFloat(style('h1').fontSize),
+      nav: style('.main-nav').flexDirection,
+      colors: ['--ink', '--accent', '--healthy', '--outage', '--danger', '--warning'].map(key => root.getPropertyValue(key).trim()),
+    };
+  });
+  const light = await inspect();
+  assert.equal(light.background, 'rgb(245, 245, 247)');
+  assert.equal(light.panel, 'rgb(255, 255, 255)');
+  assert.ok(light.bodySize <= 12 && light.headingSize <= 20);
+  assert.equal(light.nav, 'row');
+  for (const color of light.colors) assert.match(color, /^#([0-9a-f])\1([0-9a-f])\2([0-9a-f])\3$/i);
+  const positions = await page.evaluate(() => ({ providers: document.querySelector('#providers').getBoundingClientRect().toJSON(), settings: document.querySelector('#settings').getBoundingClientRect().toJSON() }));
+  assert.ok(positions.settings.left >= positions.providers.right);
+  await page.locator('#theme-select').selectOption('dark');
+  for (const color of (await inspect()).colors) assert.match(color, /^#([0-9a-f])\1([0-9a-f])\2([0-9a-f])\3$/i);
+  await page.locator('#theme-select').selectOption('light');
+  await page.locator('#overview-title').click();
+  await page.keyboard.press('Control+Home');
+  await screenshot(page, 'compact-desktop');
+});
+
+test('封号与费用风险常驻显示；断开服务也不隐藏；开关关联风险说明', async t => {
+  const { page } = await dashboard(t, { wait: false, respond: () => ({ abort: true }) });
+  await waitText(page, '#connection-banner', '连接失败');
+  await page.locator('#retry-risk').waitFor({ state: 'visible' });
+  assert.match(await page.locator('#retry-risk').innerText(), /封号/);
+  assert.match(await page.locator('#retry-risk').innerText(), /费用/);
+  assert.match(await page.locator('#enabled').getAttribute('aria-describedby'), /settings-risk/);
+  assert.match(await page.locator('#settings-risk').innerText(), /封号/);
+});
+
+test('每项参数都有通俗解释；心跳不是探活、退避不是总等待时限', async t => {
+  const { page } = await dashboard(t);
+  const hints = {
+    initialDelayMs: /第一次重试.*2 秒/,
+    maxDelayMs: /不是.*总.*时.*Retry-After/s,
+    attemptTimeoutMs: /响应头.*非流式/,
+    streamIdleTimeoutMs: /收到.*数据.*重新计时/,
+    heartbeatMs: /不会.*调用.*模型/,
+    maxConcurrentRequests: /32.*满.*429/s,
+    historyDays: /统计.*不是.*聊天/,
+    upstreamUrl: /3425.*3430/,
+  };
+  for (const [key, pattern] of Object.entries(hints)) assert.match(await page.locator(`#${key}-hint`).innerText(), pattern);
+  assert.match(await page.locator('#jitter-hint').innerText(), /25%/);
+  assert.match(await page.locator('#enabled-hint').innerText(), /只尝试一次/);
+  await page.getByLabel('初始退避', { exact: true }).fill('3');
+  assert.match(await page.locator('#policy-preview').innerText(), /先等 3 秒.*逐次加倍.*每次最多 60 秒.*尚未保存/);
+});
+
+test('页面流程说明包括成功继续、永久错误、部分输出不重放和退出终止', async t => {
+  const { page } = await dashboard(t, { viewport: { width: 390, height: 844 } });
+  const text = await page.locator('#how-it-works').innerText();
+  for (const pattern of [/3430.*3425/s, /2 → 4 → 8 → 16 → 32 → 60/, /401.*403/, /文本.*思考.*工具/, /退出.*重启/]) assert.match(text, pattern);
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  await screenshot(page, 'compact-mobile');
+});
 
 test('官方启动页先等 ready，再读取端口；优先 service 并传递 theme/lang，replace 不留启动历史', async t => {
   const page = await launcher(t, `
