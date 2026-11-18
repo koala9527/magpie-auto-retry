@@ -48,14 +48,16 @@ export async function configureCodexForwarding({ directory, codexHome = process.
   try {
     if (!isAbsolute(codexHome)) return report('not_managed');
     const home = resolve(codexHome);
+    if ((await lstat(home)).isSymbolicLink()) return report('unsupported_config');
+    const realHome = await realpath(home);
     const trackingPath = join(directory, 'codex-portable.json');
     if ((await lstat(trackingPath)).size > 65536) return report('error');
     const tracking = JSON.parse(await readFile(trackingPath, 'utf8'));
-    if (!tracking?.homes || !Object.entries(tracking.homes).some(([path, data]) => isAbsolute(path) && resolve(path) === home && data?.lineage === true)) return report('not_managed');
-    if ((await lstat(home)).isSymbolicLink()) return report('unsupported_config');
+    const isSamePath = (a, b) => process.platform === 'win32' ? resolve(a).toLowerCase() === resolve(b).toLowerCase() : resolve(a) === resolve(b);
+    if (!tracking?.homes || !Object.entries(tracking.homes).some(([path, data]) => isAbsolute(path) && (isSamePath(path, home) || isSamePath(path, realHome)) && data?.lineage === true)) return report('not_managed');
     const file = join(home, 'config.toml');
     const info = await lstat(file);
-    if (!info.isFile() || info.isSymbolicLink() || info.size > 1024 * 1024 || resolve(await realpath(file)).toLowerCase() !== file.toLowerCase()) return report('unsupported_config');
+    if (!info.isFile() || info.isSymbolicLink() || info.size > 1024 * 1024 || !isSamePath(await realpath(file), join(realHome, 'config.toml'))) return report('unsupported_config');
     const original = await readFile(file, 'utf8');
     const plan = planCodexForwarding(original, { upstreamUrl, proxyUrl });
     if (!plan.changed) return report(plan.status);

@@ -49,6 +49,13 @@ test('startup forwards only the current Codex home explicitly tracked by Magpie'
   assert.equal(report.restartRequired, true);
   assert.equal(await readFile(join(f.codexHome, 'config.toml'), 'utf8'), config.replace('http://127.0.0.1:3425/v1', urls.proxyUrl));
   assert.equal((await configureCodexForwarding(f)).status, 'already_configured');
+  // Verify case-insensitive path tracking on Windows runner (e.g. 8.3 short name or drive letter casing)
+  if (process.platform === 'win32') {
+    const altHome = f.codexHome.charAt(0).toLowerCase() === f.codexHome.charAt(0)
+      ? f.codexHome.charAt(0).toUpperCase() + f.codexHome.slice(1)
+      : f.codexHome.charAt(0).toLowerCase() + f.codexHome.slice(1);
+    assert.equal((await configureCodexForwarding({ ...f, codexHome: altHome })).status, 'already_configured');
+  }
   assert.ok(!JSON.stringify(report).includes('EXISTING_KEY'));
   assert.ok(!JSON.stringify(report).includes(f.codexHome));
 });
