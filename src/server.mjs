@@ -8,7 +8,7 @@ import { Statistics } from './statistics.mjs';
 import { RetryEngine, readBounded } from './retry.mjs';
 import { protocolError } from './sse.mjs';
 
-const VERSION = '1.0.0';
+const VERSION = '1.0.1';
 const MAX_REQUEST = 16 * 1024 * 1024;
 const ignoredHeaders = new Set(['host', 'connection', 'content-length', 'transfer-encoding', 'keep-alive', 'te', 'trailer', 'upgrade', 'proxy-authorization', 'proxy-authenticate', 'cookie', 'set-cookie', 'x-auto-retry-token']);
 const assets = new Map([

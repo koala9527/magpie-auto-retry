@@ -1,6 +1,6 @@
 {
   "name": "magpie-auto-retry",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A local Magpie plugin for infinite, cancellable provider retries, automatic request recovery, and an availability dashboard.",
   "type": "module",
   "main": "./index.mjs",
