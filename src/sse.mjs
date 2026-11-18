@@ -61,6 +61,13 @@ export function stripMetadata(input) {
 export function inspectEvent({ data, event = '' }) {
   if (!data || typeof data !== 'object') return { hasOutput: false, complete: data === '[DONE]',
     failure: data === '[DONE]' ? null : { retryable: true, code: 'invalid_sse_data', status: 502 } };
+  const choiceFilter = data.choices?.some(c => c.finish_reason === 'content_filter');
+  const candidateFilter = data.candidates?.some(c => ['SAFETY', 'RECITATION', 'BLOCKLIST', 'PROHIBITED_CONTENT'].includes(c.finishReason));
+  const incompleteReason = data.response?.incomplete_details?.reason ?? data.incomplete_details?.reason;
+  const blockReason = data.promptFeedback?.blockReason;
+  if (choiceFilter || candidateFilter || blockReason || ['content_filter', 'content_policy_violation', 'safety', 'prohibited_content', 'recitation'].includes(incompleteReason)) {
+    return { hasOutput: false, complete: false, failure: { retryable: false, code: 'content_filter', status: 400 } };
+  }
   const type = data.type || event;
   if (data.error || ['error', 'response.failed', 'response.incomplete'].includes(type)) {
     const detail = data.error ?? data.response?.error ?? {};
@@ -90,7 +97,10 @@ export function inspectEvent({ data, event = '' }) {
 }
 
 export function protocolError(protocol, code, message = '请求已停止。提供商恢复后请由客户端继续。') {
-  const error = { code, message, type: 'api_error' };
+  const type = ['content_filter', 'protocol_mismatch', 'invalid_request_error'].includes(code)
+    ? 'invalid_request_error'
+    : 'api_error';
+  const error = { code, message, type };
   if (protocol === 'anthropic') return `event: error\ndata: ${JSON.stringify({ type: 'error', error })}\n\n`;
   if (protocol === 'responses') return `event: response.failed\ndata: ${JSON.stringify({ type: 'response.failed', response: { status: 'failed', error } })}\n\n`;
   if (protocol === 'gemini') return `data: ${JSON.stringify({ error: { code: 502, message, status: 'UNAVAILABLE', details: [{ reason: code }] } })}\n\n`;

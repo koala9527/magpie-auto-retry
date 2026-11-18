@@ -51,6 +51,22 @@ test('all supported protocols recognize completion and stream failures', () => {
   }
 });
 
+test('protocol refusal markers are permanent failures, never successful completion', () => {
+  for (const data of [
+    { type: 'response.incomplete', response: { incomplete_details: { reason: 'content_filter' } } },
+    { choices: [{ finish_reason: 'content_filter' }] },
+    { candidates: [{ index: 0, finishReason: 'SAFETY' }] },
+    { promptFeedback: { blockReason: 'PROHIBITED_CONTENT' } },
+  ]) {
+    const result = inspectEvent({ data });
+    assert.equal(result.complete, false);
+    assert.equal(result.failure.code, 'content_filter');
+    assert.equal(result.failure.retryable, false);
+  }
+  const wire = JSON.parse(protocolError('responses', 'content_filter').split('data: ')[1]);
+  assert.equal(wire.response.error.type, 'invalid_request_error');
+});
+
 test('internal attribution is stripped from JSON without removing vendor fields', () => {
   const body = { type: 'message_start', message: { id: 'x' }, _magpieAutoRetry: { version: 1, provider: { id: 'a', name: 'A' } } };
   const result = stripMetadata(body);

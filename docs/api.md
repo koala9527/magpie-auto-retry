@@ -37,7 +37,7 @@
 
 ```js
 {
-  version: "1.0.1", generatedAt: 1794900000000, period: "24h",
+  version: "1.0.2", generatedAt: 1794900000000, period: "24h",
   server: {
     port: 3430, proxyUrl: "http://127.0.0.1:3430/v1",
     upstreamUrl: "http://127.0.0.1:3425", runningSince: 1794900000000,

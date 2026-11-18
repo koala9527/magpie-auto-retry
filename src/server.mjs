@@ -8,7 +8,7 @@ import { Statistics } from './statistics.mjs';
 import { RetryEngine, readBounded } from './retry.mjs';
 import { protocolError } from './sse.mjs';
 
-const VERSION = '1.0.1';
+const VERSION = '1.0.2';
 const MAX_REQUEST = 16 * 1024 * 1024;
 const ignoredHeaders = new Set(['host', 'connection', 'content-length', 'transfer-encoding', 'keep-alive', 'te', 'trailer', 'upgrade', 'proxy-authorization', 'proxy-authenticate', 'cookie', 'set-cookie', 'x-auto-retry-token']);
 const assets = new Map([
@@ -60,7 +60,8 @@ export async function createRetryServer({ port = 3430, dataDir, settings: initia
   const admissions = new Set();
   const sendJson = (res, status, data) => { res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(data)); };
   const snapshot = period => ({ version: VERSION, ...statistics.snapshot(period), settings,
-    server: { port: actualPort, proxyUrl: `${address}/v1`, upstreamUrl: settings.upstreamUrl, runningSince, uptimeMs: Math.max(0, now() - runningSince), storageStatus: storage.status, admittedRequests: admissions.size } });
+    server: { port: actualPort, proxyUrl: `${address}/v1`, upstreamUrl: settings.upstreamUrl, runningSince, uptimeMs: Math.max(0, now() - runningSince), storageStatus: storage.status, admittedRequests: admissions.size,
+      localForwarding: service.localForwarding } });
   const flush = () => storage.write('statistics.json', statistics.serialize());
 
   function reserve(res) {
@@ -163,7 +164,9 @@ export async function createRetryServer({ port = 3430, dataDir, settings: initia
       res.end();
     } catch (error) {
       if (res.destroyed) return;
-      const message = error.code === 'cancelled' ? '用户取消了此请求。' : error.code === 'retry_disabled' ? '自动重试已停用。' : error.code === 'stream_interrupted' ? '提供商在部分输出后断流；已停止，避免重复文本或工具调用。' : '提供商返回了需要客户端处理的错误。';
+      const message = error.code === 'cancelled' ? '用户取消了此请求。' : error.code === 'retry_disabled' ? '自动重试已停用。' : error.code === 'stream_interrupted' ? '提供商在部分输出后断流；已停止，避免重复文本或工具调用。'
+        : error.code === 'content_filter' ? '提供商明确拒绝了此请求（content_filter）；已停止重发。'
+          : error.code === 'protocol_mismatch' ? '此账号的协议不支持当前模型的工具调用；请检查提供商协议。' : '提供商返回了需要客户端处理的错误。';
       if (res.headersSent) res.end(protocolError(protocol, error.code || 'gateway_error', message));
       else if (error.body?.length) { res.writeHead(error.status || 502, { 'Content-Type': 'application/json' }); res.end(error.body); }
       else sendJson(res, error.status || 502, { error: { code: error.code || 'gateway_error', message } });
@@ -224,7 +227,8 @@ export async function createRetryServer({ port = 3430, dataDir, settings: initia
   catch (error) { server.close(); throw error; }
   const persist = setInterval(() => { if (!closing) flush().catch(() => {}); }, 5000);
   persist.unref?.();
-  return { server, address, port: actualPort, token, statistics, snapshot, flush, get settings() { return settings; },
+  const service = { server, address, port: actualPort, token, statistics, snapshot, flush,
+    localForwarding: { status: 'standalone', restartRequired: false }, get settings() { return settings; },
     async close() {
       if (closing) return;
       closing = true; clearInterval(persist); engine.cancelAll();
@@ -232,4 +236,5 @@ export async function createRetryServer({ port = 3430, dataDir, settings: initia
       await new Promise(resolve => { server.close(resolve); server.closeAllConnections?.(); });
       await flush().catch(() => {});
     } };
+  return service;
 }

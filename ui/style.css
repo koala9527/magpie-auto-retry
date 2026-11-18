@@ -212,17 +212,11 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 .guide-body summary { cursor: pointer; font-size: 11px; min-height: 28px; }
 .guide-body details p { margin-top: 8px; color: var(--muted); font-size: 11px; }
 .local-label { color: var(--muted); background: var(--surface-muted); font-size: 10px; padding: 3px 6px; border-radius: 3px; }
-.connection-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: 24px; padding: 0 14px 14px; }
-.connection-instructions > p:first-child { font-size: 11px; color: var(--muted); margin-bottom: 12px; }
-.connection-instructions strong { color: var(--ink); font-weight: 500; }
-.copy-field { display: flex; align-items: stretch; min-width: 0; }
-.copy-field input { border-radius: 5px 0 0 5px; font: 11px var(--font-number); background: var(--surface-muted); }
-.copy-field button { border-radius: 0 5px 5px 0; border-left: 0; flex-shrink: 0; }
-.service-facts { align-self: start; padding-left: 20px; border-left: 1px solid var(--border); }
-.service-facts > div { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 12px; padding: 5px 0; font-size: 11px; }
-.service-facts dt { color: var(--muted); }
-.service-facts dd { font-family: var(--font-number); overflow-wrap: anywhere; }
-.service-facts dd span { color: var(--muted); font-family: var(--font-body); font-size: 10px; }
+.runtime-facts { display: grid; gap: 5px; padding: 0 14px 14px; }
+.runtime-facts > div { display: grid; grid-template-columns: 100px minmax(0, 1fr); gap: 12px; font-size: 11px; }
+.runtime-facts dt { color: var(--muted); }
+.runtime-facts dd { overflow-wrap: anywhere; }
+.traffic-note { padding: 10px 12px; margin-bottom: 12px; font-size: 11px; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: 6px; }
 .data-actions { padding: 10px 14px; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; }
 .data-actions p { color: var(--muted); font-size: 10px; }
 .data-actions > div { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -252,8 +246,6 @@ dialog strong { display: block; color: var(--ink); font-weight: 500; margin-top:
   .dashboard-grid > * { width: 100%; }
   .settings-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .activity-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .connection-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
-  .service-facts { border-left: 0; border-top: 1px solid var(--border); padding: 12px 0 0; }
 }
 @media (max-width: 479px) {
   .app-shell { padding: 0 12px; }

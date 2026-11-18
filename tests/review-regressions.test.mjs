@@ -107,15 +107,20 @@ test('review: admin cancellation releases an inference blocked on downstream dra
   const paused = new Promise(resolve => client.on('response', response => { response.pause(); resolve(response); }));
   client.end('{"model":"review/chat","stream":true}');
   await paused;
-  await until(() => downstream?.writableNeedDrain, 2500);
-  await sleep(50);
-  assert.ok(downstream.writableNeedDrain, 'paused TCP reader did not create downstream backpressure');
+  // Hold this real socket's writes after headers arrive. TCP autotuning can
+  // drain a paused reader's OS buffer between samples; explicit corking keeps
+  // the HTTP writable blocked until cancellation, independent of runner speed.
+  const blockedSocket = downstream.socket;
+  blockedSocket.cork();
+  await until(() => downstream.writableNeedDrain && downstream.listenerCount('drain') > 0, 2500);
+  assert.ok(blockedSocket.writableCorked > 0, 'fixture must hold the real downstream socket');
+  assert.ok(downstream.writableNeedDrain, 'fixture did not create downstream backpressure');
   const blockedDownstream = downstream;
   const id = f.gateway.snapshot().activeRequests[0]?.id;
   assert.ok(id);
   const cancelled = await f.admin(`/api/requests/${id}/cancel`, { method: 'POST' });
   assert.equal(cancelled.status, 200);
-  await sleep(150);
+  await until(() => f.gateway.snapshot().totals.activeRequests === 0);
   const state = f.gateway.snapshot();
   const next = await f.post(chatPath, { model: 'review/next' });
   const nextStatus = next.status;
@@ -124,6 +129,8 @@ test('review: admin cancellation releases an inference blocked on downstream dra
     cancelledCount: state.totals.cancelledRequests, nextStatus, needDrain: blockedDownstream.writableNeedDrain,
     queuedBytes: blockedDownstream.writableLength, sentBytes }));
   assert.equal(state.totals.activeRequests, 0, 'admin cancellation left the inference and concurrency slot owned by a drain wait');
+  assert.equal(state.totals.cancelledRequests, 1);
+  assert.equal(nextStatus, 200, 'cancelled request did not release the admission slot');
 });
 
 test('review: partial request uploads reserve the concurrency and memory budget', { timeout: 6000 }, async t => {

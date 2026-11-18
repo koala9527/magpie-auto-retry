@@ -26,7 +26,7 @@
         <a href="#activity">故障与事件</a>
         <a href="#settings">运行设置</a>
         <a href="#how-it-works">使用说明</a>
-        <a href="#connection">接入方式</a>
+        <a href="#runtime">运行信息</a>
       </nav>
       <span class="sidebar-meta" id="sidebar-version">版本待连接</span>
     </aside>
@@ -49,6 +49,7 @@
         <span class="notice-symbol" aria-hidden="true">!</span><div><strong id="storage-title">统计存储降级</strong><p id="storage-detail"></p></div>
       </div>
       <p class="action-feedback" id="action-status" role="status" aria-live="polite" aria-atomic="true"></p>
+      <p class="traffic-note" id="traffic-note" role="status" hidden></p>
 
       <section class="overview-section" id="overview" aria-labelledby="overview-title">
         <div class="page-heading">
@@ -105,11 +106,11 @@
           <p>插件是 Magpie 前面的转接服务：先替 Agent 把请求发出去，临时失败时等一会儿再试，完整成功后把结果交回 Agent。</p>
           <p class="route-line">Agent → 重试服务 :3430 → Magpie :3425 → 提供商</p>
           <ol class="retry-steps">
-            <li><strong>先发一次。</strong> Agent 使用 3430 地址，模型名和 key 不变；插件转发给本机 Magpie。</li>
+            <li><strong>先发一次。</strong> 默认将 Magpie 管理的 Codex 配为本地转发，重开后生效。模型名和 key 不变；请求经插件转发给本机 Magpie。</li>
             <li><strong>临时失败就等一等。</strong> 网络断开、408/425/429/5xx、单次超时，或输出前的空流、临时流错误/断流，会等待后再发同一个请求。</li>
             <li><strong>连续失败，逐次加长等待。</strong> 默认参数、关闭抖动时：2 → 4 → 8 → 16 → 32 → 60 → 60…秒。开启抖动时上下浮动约 25%；Retry-After 可以要求更长等待，最长 24 小时。没有重试次数或累计等待上限。</li>
             <li><strong>成功后继续。</strong> 原连接还在时，插件把回复交回 Agent，由 Agent 继续任务。等待心跳只是注释，不调用模型，也不检测提供商。</li>
-            <li><strong>该结束时就结束。</strong> 401/403、无效请求/模型、明确的余额不足、密钥或证书错误，直接交回客户端。已经发出文本、思考或工具调用后不从头重试，避免重复输出和执行。</li>
+            <li><strong>该结束时就结束。</strong> 协议不匹配、content_filter 明确拒绝、401/403、无效请求/模型、余额不足、密钥或证书错误不做无限重试。已经发出文本、思考或工具调用后不从头重试，避免重复输出和执行。</li>
           </ol>
           <details><summary>取消、退出或重启后会怎样？</summary><p>取消、断开连接、Agent 退出、插件停止或重启都会结束当前请求。未完成请求只存在内存里，重启后不会复活；非流式客户端自己的 HTTP 总超时仍有效。</p><p>可用率按真实请求结果计算。超过 5 分钟没流量、服务离线时记为未知；心跳不算成功。没有观测就显示 —，不是 100%。</p><p>监听端口在 Magpie 插件选项里修改后重启；上游地址在设置里填写本机 Magpie 地址。恢复默认只回填表单，不会自动保存。</p></details>
         </div>
@@ -145,9 +146,9 @@
 
       </div>
 
-      <section class="surface connection-panel" id="connection" aria-labelledby="connection-title">
-        <header class="section-header"><div><h2 id="connection-title">接入方式</h2></div><span class="local-label">仅本机转发</span></header>
-        <div class="connection-grid"><div class="connection-instructions"><p>将 Agent 的 <strong>API 基址</strong>改为下面的地址。<br>模型名和 Magpie key 保持原样。</p><label class="field-label" for="proxy-url">Agent API 基址</label><div class="copy-field"><input id="proxy-url" type="text" readonly spellcheck="false" placeholder="等待服务返回地址"><button class="button button-small" type="button" id="copy-proxy" disabled>复制地址</button></div><p class="field-hint">插件不会改写现有 Agent 配置。已经退出或取消的任务不会自动重发。</p></div><dl class="service-facts"><div><dt>运行上游</dt><dd id="runtime-upstream">—</dd></div><div><dt>服务运行时长</dt><dd id="service-uptime">—</dd></div><div><dt>统计存储</dt><dd id="storage-status">等待连接</dd></div><div><dt>刷新频率</dt><dd>3 秒<span> · 隐藏页面暂停</span></dd></div></dl></div>
+      <section class="surface" id="runtime" aria-labelledby="runtime-title">
+        <header class="section-header"><h2 id="runtime-title">运行信息</h2><span class="local-label">本地转发</span></header>
+        <dl class="runtime-facts"><div><dt>转发配置</dt><dd id="forwarding-status">等待连接</dd></div><div><dt>运行上游</dt><dd id="runtime-upstream">—</dd></div><div><dt>服务运行时长</dt><dd id="service-uptime">—</dd></div><div><dt>统计存储</dt><dd id="storage-status">等待连接</dd></div><div><dt>刷新频率</dt><dd>3 秒 · 隐藏页面暂停</dd></div></dl>
         <div class="data-actions"><p>仅导出聚合统计，不包含对话内容、密钥或页面令牌。</p><div><button class="button" type="button" id="refresh-button"><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M16 8a6 6 0 1 0 0 4M16 3v5h-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>刷新数据</button><button class="button" type="button" id="export-button" disabled>导出 JSON</button><button class="button button-danger-quiet" type="button" id="reset-statistics" disabled>重置统计</button></div></div>
       </section>
       <footer class="workspace-footer"><span>Magpie Auto Retry<span class="footer-separator">/</span>设置与故障统计</span><span>无流量时不推算为可用。</span></footer>

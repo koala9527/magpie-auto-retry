@@ -76,6 +76,27 @@ test('401 returns immediately without masquerading as provider recovery', async 
   assert.equal(s.totals.failedRequests, 1);
 });
 
+test('pre-output SSE content-filter errors are counted once and not replayed', async t => {
+  let attempts = 0;
+  const f = await fixture(t, (_, res) => {
+    attempts++;
+    res.writeHead(200, { 'Content-Type': 'text/event-stream' });
+    res.end('data: {"type":"response.failed","response":{"error":{"code":"server_error","message":"refused this request (safety filter: content_filter)"}}}\n\n');
+  });
+  const response = await fetch(`${f.gateway.address}/v1/responses`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: '{"model":"fixture/model","stream":true}', signal: AbortSignal.timeout(1500),
+  });
+  const output = await response.text();
+  assert.equal(attempts, 1);
+  assert.match(output, /content_filter/);
+  const state = f.gateway.snapshot();
+  assert.equal(state.totals.failures, 1);
+  assert.equal(state.totals.retries, 0);
+  assert.equal(state.totals.failedRequests, 1);
+  assert.equal(state.events.some(event => event.code === 'content_filter'), true);
+});
+
 test('SSE pre-output errors are retried with heartbeats and only the good preamble reaches the client', async t => {
   let attempts = 0;
   const f = await fixture(t, (_, res) => {

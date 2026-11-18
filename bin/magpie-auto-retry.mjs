@@ -5,7 +5,7 @@ import { createRetryServer } from '../src/server.mjs';
 
 const args = process.argv.slice(2);
 if (args.includes('--help') || args.includes('-h')) {
-  console.log(`Magpie Auto Retry 1.0.1
+  console.log(`Magpie Auto Retry 1.0.2
 
 Usage: magpie-auto-retry [--port 3430] [--upstream http://127.0.0.1:3425] [--data-dir PATH]
 
@@ -13,7 +13,7 @@ Dashboard: http://127.0.0.1:3430/
 Agent base URL: http://127.0.0.1:3430/v1
 Keep the original Magpie model name and key. Ctrl+C stops the service.`);
 } else if (args.includes('--version')) {
-  console.log('1.0.1');
+  console.log('1.0.2');
 } else {
   try {
     const flags = {};
@@ -25,7 +25,7 @@ Keep the original Magpie model name and key. Ctrl+C stops the service.`);
     const dataDir = flags['--data-dir'] ? resolve(flags['--data-dir']) : join(homedir(), '.magpie-auto-retry');
     const settings = flags['--upstream'] ? { upstreamUrl: flags['--upstream'] } : {};
     const service = await createRetryServer({ port, dataDir, settings });
-    console.log(`Magpie Auto Retry 1.0.1\nDashboard: ${service.address}/\nAgent base URL: ${service.address}/v1\nRetry policy: infinite, cancellable`);
+    console.log(`Magpie Auto Retry 1.0.2\nDashboard: ${service.address}/\nAgent base URL: ${service.address}/v1\nRetry policy: infinite, cancellable`);
     let stopped = false;
     const stop = async () => { if (stopped) return; stopped = true; await service.close(); };
     process.once('SIGINT', stop);

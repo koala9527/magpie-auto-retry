@@ -1,6 +1,6 @@
 {
   "name": "magpie-auto-retry",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A local Magpie plugin for infinite, cancellable provider retries, automatic request recovery, and an availability dashboard.",
   "type": "module",
   "main": "./index.mjs",
@@ -74,7 +74,8 @@
     },
     "options": {
       "port": 3430,
-      "upstreamUrl": "http://127.0.0.1:3425"
+      "upstreamUrl": "http://127.0.0.1:3425",
+      "autoForwardCodex": true
     },
     "permissions": []
   },

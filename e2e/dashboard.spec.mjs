@@ -252,6 +252,26 @@ test('真实空态：不生成示例提供商，可用率未知，所有 API 带
   await screenshot(page, 'dashboard-empty-light');
 });
 
+test('没有接入方式功能；运行信息保留数据操作，无流量提示与永久错误说明可见', async t => {
+  const { page } = await dashboard(t);
+  assert.equal(await page.getByRole('heading', { name: '接入方式', exact: true }).count(), 0);
+  assert.equal(await page.locator('.main-nav a[href="#connection"]').count(), 0);
+  assert.equal(await page.locator('#proxy-url, #copy-proxy').count(), 0);
+  assert.match(await page.locator('#traffic-note').innerText(), /尚未.*请求.*服务已连接.*不代表/s);
+  assert.equal(await page.getByRole('heading', { name: '运行信息', exact: true }).count(), 1);
+  assert.match(await page.locator('#how-it-works').innerText(), /content_filter.*不.*重试/);
+});
+
+test('默认本地转发状态显示实际配置结果，不把未知情况显示为配置成功', async t => {
+  const state = snapshot();
+  state.server.localForwarding = { status: 'configured', restartRequired: true };
+  const { page } = await dashboard(t, { state });
+  assert.match(await page.locator('#forwarding-status').innerText(), /本地转发.*重开 Codex/);
+  state.server.localForwarding = { status: 'not_managed', restartRequired: false };
+  await page.locator('#refresh-button').click();
+  await waitText(page, '#forwarding-status', '未检测到');
+});
+
 test('Magpie 不透明 sandbox iframe 以 Origin null 和页面令牌读取真实 HTTP API', async t => {
   const context = await browser.newContext(); t.after(() => context.close());
   const page = await context.newPage();

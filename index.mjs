@@ -1,5 +1,6 @@
 import { join } from 'node:path';
 import { createRetryServer } from './src/server.mjs';
+import { configureCodexForwarding } from './src/local-forwarding.mjs';
 
 let service;
 
@@ -13,6 +14,8 @@ export default {
     if (!input?.directory) throw new Error('magpie-auto-retry: the host did not provide a configuration directory.');
     if (service) await service.close();
     service = await createRetryServer({ port, dataDir: join(input.directory, 'magpie-auto-retry'), settings: options, providerMetadata: true });
+    service.localForwarding = await configureCodexForwarding({ directory: input.directory,
+      upstreamUrl: service.snapshot().settings.upstreamUrl, proxyUrl: `${service.address}/v1`, enabled: options.autoForwardCodex !== false });
     return {};
   },
 };

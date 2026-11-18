@@ -25,6 +25,16 @@ test('network and timeout errors retry without leaking their text', () => {
   assert.equal(classifyFailure({ body: { type: 'error', error: { type: 'overloaded_error' } } }).retryable, true);
 });
 
+test('explicit refusal and protocol mismatch stop even when wrapped as server errors', () => {
+  for (const status of [0, 400, 503]) {
+    for (const error of [
+      { code: 'content_filter' },
+      { type: 'server_error', message: 'model refused this request (safety filter: content_filter)' },
+    ]) assert.deepEqual(classifyFailure({ status, body: { error } }), { retryable: false, code: 'content_filter', status: 400 });
+    assert.deepEqual(classifyFailure({ status, body: { error: { type: 'invalid_request_error', message: 'requires Responses for tool calls; this account only supports Chat Completions' } } }), { retryable: false, code: 'protocol_mismatch', status: 400 });
+  }
+});
+
 test('backoff grows and caps forever instead of exhausting a retry budget', () => {
   const s = { ...DEFAULT_SETTINGS, jitter: false };
   assert.deepEqual([1, 2, 3, 4, 5, 6, 100000].map(n => retryDelay(n, s)), [2000, 4000, 8000, 16000, 32000, 60000, 60000]);

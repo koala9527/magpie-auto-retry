@@ -16,17 +16,15 @@ For persistent rate limiting, increase the waits, reduce concurrency, or disable
 magpie plugin add github:koala9527/magpie-auto-retry
 ```
 
-Enable **Auto Retry** in Magpie's plugin list. Existing users can use Magpie's plugin update action, then restart the plugin. Current revision: **1.0.1**. Updating keeps saved settings.
+Enable **Auto Retry** in Magpie's plugin list. Existing users can use Magpie's plugin update action, then restart the plugin. Current revision: **1.0.2**. Updating keeps saved settings.
 
 The CLI command is `magpie plugin update`; it updates all community plugins. Restart this plugin afterward.
 
-Change the agent's Magpie API base URL to:
+### Default local forwarding
 
-```text
-http://127.0.0.1:3430/v1
-```
+On startup, the plugin automatically inspects Magpie-managed Codex configurations and updates the base URL from the default gateway (`3425`) to the retry service (`http://127.0.0.1:3430/v1`). If Codex is currently running, **restart Codex once** to apply the change. No manual configuration editing or connection setup is needed. Forwarding status is visible directly under the **Runtime info** section.
 
-Keep the model name and Magpie key. OpenAI-compatible clients usually use the `/v1` suffix; Anthropic SDKs usually use `http://127.0.0.1:3430` and append `/v1/messages` themselves. The plugin does not edit agent configuration files.
+For standalone or unmanaged agents, point the API base URL to `http://127.0.0.1:3430/v1` while keeping the original model names and Magpie keys.
 
 ## How a request travels
 
@@ -40,7 +38,10 @@ Agent → Auto Retry :3430 → Magpie :3425 → provider
 2. On a temporary network error, 408/425/429/5xx, attempt timeout, or a temporary/empty/interrupted stream before output, keep the client connection open and retry the same body after a wait.
 3. Increase the wait after consecutive failures. With defaults and jitter disabled: **2 → 4 → 8 → 16 → 32 → 60 → 60… seconds**. Jitter is enabled by default, so actual waits vary slightly.
 4. On complete success, return the result. The agent then continues using its own task loop.
-5. Stop on permanent errors such as 401/403, invalid requests/models, explicit insufficient credit, invalid keys, or certificate errors.
+5. **Stop immediately on permanent errors and safety refusals**:
+   - **Content filters (`content_filter` / safety refusal)**: When a provider's safety policy blocks a prompt, retrying repeatedly will never succeed and will trigger abuse detection, risking account suspension or bans. The plugin halts and returns the refusal directly.
+   - **Protocol mismatch (e.g. `requires Responses for tool calls`)**: If the provider account protocol does not support the requested endpoint/tool features, retrying cannot resolve it; the error is returned immediately.
+   - **Auth and quota errors**: 401/403, invalid keys, exhausted quota, or TLS errors terminate the request immediately.
 
 ### When retries stop
 
@@ -119,11 +120,7 @@ npm run test:browser
 npm pack
 ```
 
-See the [1.0.1 verification record](docs/verification-1.0.1.md), [quality contract](CONSTRAINTS.md), and [contribution guide](CONTRIBUTING.md).
-
-## Disable or revert
-
-Point the agent back to its original Magpie address and disable the plugin. For an older package, see [v1.0.0](https://github.com/koala9527/magpie-auto-retry/releases/tag/v1.0.0). Provider accounts, agent files, and Magpie itself were not changed. Export statistics first if you want to keep them.
+See the [1.0.2 verification record](docs/verification-1.0.2.md), [quality contract](CONSTRAINTS.md), and [contribution guide](CONTRIBUTING.md).
 
 ## License
 

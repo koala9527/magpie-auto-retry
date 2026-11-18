@@ -6,6 +6,13 @@ export function classifyFailure({ status = 0, body, error } = {}) {
   const detail = body?.error ?? body?.response?.error ?? {};
   const vendorCode = String(detail.code ?? detail.type ?? '').toLowerCase();
   const message = typeof detail.message === 'string' ? detail.message.slice(0, 2000) : '';
+  if (['content_filter', 'content_policy_violation', 'safety', 'prohibited_content', 'recitation'].includes(vendorCode)
+    || /safety filter:\s*content_filter|content policy violation/i.test(message)) {
+    return { retryable: false, code: 'content_filter', status: 400 };
+  }
+  if (/requires Responses for tool calls|only supports Chat Completions/i.test(message)) {
+    return { retryable: false, code: 'protocol_mismatch', status: 400 };
+  }
   if (permanentCodes.has(vendorCode) || /insufficient.*(quota|credit)|billing.hard.limit|余额不足|额度已用完/i.test(message)) {
     return { retryable: false, code: 'permanent_provider_error', status: status || 400 };
   }

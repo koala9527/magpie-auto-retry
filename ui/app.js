@@ -175,7 +175,6 @@
     $('export-button').disabled = !connected || exporting;
     $('reset-statistics').disabled = !connected || resetting;
     $('confirm-reset').disabled = !connected || resetting;
-    $('copy-proxy').disabled = !connected || !latest?.server.proxyUrl;
     $('save-button').firstChild.textContent = saving ? '保存中…' : '保存设置';
     text($('export-button'), exporting ? '导出中…' : '导出 JSON');
     text($('confirm-reset'), resetting ? '重置中…' : '确认重置');
@@ -388,7 +387,17 @@
 
   function renderService() {
     text($('sidebar-version'), `v${latest.version}`);
-    $('proxy-url').value = latest.server.proxyUrl;
+    const forwarding = latest.server.localForwarding?.status;
+    const forwardingText = {
+      configured: '已设置本地转发；重开 Codex 后生效', already_configured: '已设置本地转发',
+      not_managed: '未检测到 Magpie 管理的 Codex；未修改其他配置', disabled: '自动配置已关闭',
+      not_selected: 'Codex 未选择 Magpie；保留原配置', not_local: '原地址不是本机 Magpie；保留原配置',
+      different_gateway: '原地址属于其他网关；保留原配置', unsupported_config: '配置格式未识别；保留原配置',
+      config_changed: '配置正在被其他程序修改；本次未覆盖', error: '自动配置未完成；请检查本机配置文件',
+    };
+    text($('forwarding-status'), forwardingText[forwarding] || '本机服务转发；未确认自动配置状态');
+    $('traffic-note').hidden = latest.totals.requests !== 0;
+    if (latest.totals.requests === 0) text($('traffic-note'), '尚未收到经过本插件的推理请求。管理服务已连接，不代表 Agent 的请求已经经过插件；已有 Codex 进程需重开才会读取新地址。');
     text($('runtime-upstream'), latest.server.upstreamUrl);
     text($('service-uptime'), duration(latest.server.uptimeMs));
     const status = latest.server.storageStatus;
@@ -666,17 +675,6 @@
       resetting = false; $('dismiss-reset').disabled = false; updateControls();
       if (!resetDialog.open) refresh();
       else if (!document.hidden) pollTimer = setTimeout(() => refresh(), 3000);
-    }
-  });
-
-  $('copy-proxy').addEventListener('click', async () => {
-    if (!connected || !latest?.server.proxyUrl) return;
-    try {
-      await navigator.clipboard.writeText(latest.server.proxyUrl);
-      notify('action-status', 'Agent API 基址已复制。模型名和 Magpie key 保持原样。');
-    } catch {
-      $('proxy-url').focus(); $('proxy-url').select();
-      notify('action-status', '剪贴板写入未完成，地址已选中；请使用 Ctrl+C 或 Command+C 复制。', 'error');
     }
   });
 
